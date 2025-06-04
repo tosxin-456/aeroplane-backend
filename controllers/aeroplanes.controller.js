@@ -237,7 +237,7 @@ const bookFlight = async (req, res) => {
 
         // STEP 4: SAVE PAYMENT
         const totalAmount = paymentDetails.amount; // this is already amount + 15%
-        const totalPrice = parseFloat((totalAmount / 1.15).toFixed(2));
+        const totalPrice = parseFloat((totalAmount / 1.10).toFixed(2));
         const totalCharge = parseFloat((totalAmount - totalPrice).toFixed(2));
         
 
