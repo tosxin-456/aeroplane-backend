@@ -51,17 +51,25 @@ app.use("/api/manual-booking", ManualBookingRoutes);
 sequelize
     .authenticate()
     .then(() => {
+        const env = process.env.NODE_ENV || "development";
+        const modeMessage =
+            env === "production"
+                ? "✅ Connected to the **LIVE** database (production)."
+                : "✅ Connected to the **OFFLINE** database (development).";
+
         console.log("Connection has been established successfully.");
+        console.log(modeMessage);
 
         // Sync all models to the database
-        return sequelize.sync(); // You can also use { alter: true } during development
+        return sequelize.sync(); // Optional: { alter: true } for dev
     })
     .then(() => {
-        console.log("All models were synchronized successfully.");
+        console.log("✅ All models were synchronized successfully.");
     })
     .catch((error) => {
-        console.error("Unable to connect to the database:", error);
+        console.error("❌ Unable to connect to the database:", error);
     });
+
 
 
     
