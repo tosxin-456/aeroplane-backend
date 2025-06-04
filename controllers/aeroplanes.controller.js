@@ -247,7 +247,7 @@ const bookFlight = async (req, res) => {
             currency,
             charge: totalCharge * 100,
             paymentMethod: paymentDetails.paymentMethod || "card",
-            status: paymentDetails.status || "succeeded",
+            status: paymentDetails.status || "successful",
             reference: paymentDetails.paymentMethodId,
             metadata: {
                 flightOfferId: flightOffer.id,

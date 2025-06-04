@@ -1,22 +1,24 @@
 const { Sequelize } = require("sequelize");
+require("dotenv").config();
 
-// Replace these values with your actual database credentials
-const sequelize = new Sequelize("sql7783021", "sql7783021", "KSLqFZ1xsY", {
-  host: "sql7.freesqldatabase.com",
-  port: 3306,
-  dialect: "mysql",
-  logging: false,
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
-});
+const isProduction = process.env.NODE_ENV === "production";
 
+const sequelize = new Sequelize(
+  isProduction ? process.env.PROD_DB_NAME : process.env.DEV_DB_NAME,
+  isProduction ? process.env.PROD_DB_USER : process.env.DEV_DB_USER,
+  isProduction ? process.env.PROD_DB_PASS : process.env.DEV_DB_PASS,
+  {
+    host: isProduction ? process.env.PROD_DB_HOST : process.env.DEV_DB_HOST,
+    port: isProduction ? process.env.PROD_DB_PORT : process.env.DEV_DB_PORT,
+    dialect: "mysql",
+    logging: false,
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
+  }
+);
 
 module.exports = sequelize;
-
-// Db: jijopxgq_teechaa
-// Username: jijopxgq_topyuo
-// Pass:zV%v!7irePoy
