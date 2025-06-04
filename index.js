@@ -23,6 +23,8 @@ const CustomerRoutes = require("./routes/customers.route");
 const BookedFlightRoutes = require("./routes/booked.route");
 const BusRoutes = require("./routes/bus.router");
 const TrainRoutes = require("./routes/trains.router");
+const ManualBookingRoutes = require("./routes/manual-booking.controller");
+
 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -39,6 +41,8 @@ app.use("/api/customers", CustomerRoutes);
 app.use("/api/booked-flights", BookedFlightRoutes);
 app.use("/api/bus-routes", BusRoutes);
 app.use("/api/train-routes", TrainRoutes);
+app.use("/api/manual-booking", ManualBookingRoutes);
+
 
 
 

@@ -10,6 +10,7 @@ const ValidatedPayment = require('../models/payments.model');
 const Customer = require('../models/customers.model');
 const Card = require('../models/cards.model');
 const openai = require('../utils/openai');
+const ManualFlightBooking = require('../models/manual-booking.model');
 const amadeus = new Amadeus({
     clientId: process.env.AmadeusKey,
     clientSecret: process.env.AmadeusSecret,
@@ -167,23 +168,35 @@ const getFlightPricing = async (req, res) => {
 const bookFlight = async (req, res) => {
     try {
         const { flightOffer, travelersInfo, paymentDetails, userId } = req.body;
-
         const { amount, currency } = paymentDetails;
-        // console.log(paymentDetails)
-        // Step 3: Book flight via Amadeus
-        const bookingResponse = await amadeus.booking.flightOrders.post(
-            JSON.stringify({
-                data: {
-                    type: "flight-order",
-                    flightOffers: [flightOffer],
-                    travelers: travelersInfo,
-                },
-            })
-        );
 
-        const bookingData = bookingResponse.data;
-        // console.log(bookingData)
-        // Step 4: Save traveler info as Customers
+        // STEP 1: BOOK FLIGHT VIA AMADEUS
+        let bookingData;
+        try {
+            const bookingResponse = await amadeus.booking.flightOrders.post(
+                JSON.stringify({
+                    data: {
+                        type: "flight-order",
+                        flightOffers: [flightOffer],
+                        travelers: travelersInfo,
+                    },
+                })
+            );
+            bookingData = bookingResponse.data;
+            // console.log(bookingData)
+        } catch (err) {
+            const amadeusError =
+                err?.response?.data?.errors?.[0]?.detail ||
+                err?.response?.data?.message ||
+                err.message;
+
+            return res.status(400).json({
+                success: false,
+                message: `Amadeus Booking Failed: ${amadeusError}`,
+            });
+        }
+
+        // STEP 2: SAVE TRAVELERS AS CUSTOMERS
         const customerRecords = await Promise.all(
             travelersInfo.map(async (traveler) => {
                 return await Customer.create({
@@ -203,13 +216,16 @@ const bookFlight = async (req, res) => {
                 });
             })
         );
-        // console.log(stripeToken)
-        // Step 5: Save BookedFlight
-        const flightSegment = flightOffer.itineraries[0].segments[0]; // Assumes 1 itinerary
+        
+        // STEP 3: SAVE BOOKED FLIGHT
+        const flightSegment = flightOffer.itineraries[0].segments[0]; // assumes 1 itinerary
+        const bookingReference = bookingData?.associatedRecords?.[0]?.reference || bookingData?.id;
+        // const bookingReference = bookingData?.id || uuidv4();
+
         const bookedFlight = await BookedFlight.create({
-            customerId: customerRecords[0].customer_id, // primary customer
+            customerId: customerRecords[0].customer_id,
             offerId: flightOffer.id,
-            bookingReference: bookingData?.id || uuidv4(),
+            bookingReference,
             airline: flightSegment.carrierCode,
             origin: flightSegment.departure.iataCode,
             destination: flightSegment.arrival.iataCode,
@@ -217,49 +233,113 @@ const bookFlight = async (req, res) => {
             arrivalTime: flightSegment.arrival.at,
             travelersInfo,
             rawOfferData: flightOffer,
-            status: "confirmed" // ✅ Booking successful, so mark as confirmed
+            status: "confirmed",
         });
 
-        // Step 7: Save Payment
-        const serviceCharge = amount * 0.15;
-        const totalAmount = amount + serviceCharge;
+        // STEP 4: SAVE PAYMENT
+        const totalAmount = paymentDetails.amount; // this is already amount + 15%
+        const totalPrice = parseFloat((totalAmount / 1.15).toFixed(2));
+        const totalCharge = parseFloat((totalAmount - totalPrice).toFixed(2));
+        
 
         await ValidatedPayment.create({
             userId: customerRecords[0].customer_id,
-            amount: totalAmount * 100, // stored in cents if needed
+            amount: totalAmount * 100,
             currency,
-            charge: serviceCharge * 100, // also in cents if needed
-            paymentMethod: charge.payment_method_details.type,
-            status: "successful",
-            reference: charge.id,
+            charge: totalCharge * 100,
+            paymentMethod: paymentDetails.paymentMethod || "card",
+            status: paymentDetails.status || "succeeded",
+            reference: paymentDetails.paymentMethodId,
             metadata: {
                 flightOfferId: flightOffer.id,
-                bookingReference: bookingData.id,
+                bookingReference,
                 travelersCount: travelersInfo.length,
-            }
+            },
         });
-        
 
+        const segment = flightOffer.itineraries?.[0]?.segments?.[0] || {};
+        const lastSegment =
+            flightOffer.itineraries?.[0]?.segments?.slice(-1)?.[0] || {};
+        const departureTime = segment.departure?.at || null;
+        const arrivalTime = lastSegment.arrival?.at || null;
+
+        // STEP 5: GENERATE CHECK-IN LINK VIA OpenAI
+        let checkInLink = null;
+        try {
+            const formattedDate = new Date(flightSegment.departure.at).toDateString();
+            const openaiRes = await openai.chat.completions.create({
+                model: "gpt-4",
+                messages: [
+                    {
+                        role: "system",
+                        content:
+                            "You are a travel assistant that helps users find airline booking or check-in URLs using airline code, origin, destination, and date.",
+                    },
+                    {
+                        role: "user",
+                        content: `Find the booking or check-in URL for airline with IATA code "${flightSegment.carrierCode}", flying from ${flightSegment.departure.iataCode} to ${flightSegment.arrival.iataCode} on ${formattedDate}. Respond with only the full URL.`,
+                    },
+                ],
+            });
+            checkInLink = openaiRes.choices?.[0]?.message?.content?.trim() || null;
+        } catch (err) {
+            console.warn("OpenAI URL generation failed:", err.message);
+        }
+
+        const detailedPaymentDetails = {
+            ...paymentDetails,
+            totalAmount,
+            totalPrice,
+            totalCharge
+          };
+
+        // STEP 6: SAVE MANUAL FLIGHT BOOKING
+        await ManualFlightBooking.create({
+            userId,
+            bookingReference,
+            flightOfferId: flightOffer.id,
+            airlineCode: segment.carrierCode,
+            origin: segment.departure.iataCode,
+            destination: lastSegment.arrival.iataCode,
+            departureTime,
+            arrivalTime,
+            travelerCount: travelersInfo.length,
+            travelersInfo,
+            paymentDetails: detailedPaymentDetails,
+            ticketingOption: bookingData?.ticketingAgreement?.option || null,
+            latestTicketingDate: bookingData?.ticketingAgreement?.latestTicketingDate || null,
+            amadeusBookingData: bookingData,
+            checkInLink,
+            status: "pending",
+        });
+
+        // FINAL SUCCESS RESPONSE
         return res.status(200).json({
             success: true,
             message: "Flight booked successfully",
             data: {
-                bookingReference: bookingData.id,
-                // paymentId: charge.id,
+                bookingReference,
                 travelers: customerRecords,
-                flight: bookedFlight
-            }
+                flight: bookedFlight,
+            },
         });
-
     } catch (error) {
-        console.error("Booking error:", error);
+        console.log("Booking error:", error);
+
+        const fallbackMessage = "An unexpected error occurred during booking.";
+        const backendError =
+            error?.response?.data?.errors?.[0]?.detail ||
+            error?.response?.data?.message ||
+            error?.message ||
+            fallbackMessage;
+
         return res.status(500).json({
             success: false,
-            message: "Booking failed",
-            error: error?.response?.data || error.message,
+            message: backendError,
         });
     }
 };
+
 
 const bookTrain = async (req, res) => {
     const { origin, destination, date } = req.query;
