@@ -7,7 +7,7 @@ const cityNames = require('../output.json');
 const getAllBookedFlights = async (req, res) => {
     try {
         const bookedFlights = await BookedFlight.findAll();
-        console.log(bookedFlights)
+        // console.log(bookedFlights)
         return res.status(200).json({ success: true, data: bookedFlights });
     } catch (error) {
         console.error("Error fetching booked flights:", error);

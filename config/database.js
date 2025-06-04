@@ -1,9 +1,9 @@
 const { Sequelize } = require("sequelize");
 
 // Replace these values with your actual database credentials
-const sequelize = new Sequelize("aeroplane", "root", "", {
-  host: "127.0.0.1",
-  port: "3306",
+const sequelize = new Sequelize("sql7783021", "sql7783021", "KSLqFZ1xsY", {
+  host: "sql7.freesqldatabase.com",
+  port: 3306,
   dialect: "mysql",
   logging: false,
   pool: {

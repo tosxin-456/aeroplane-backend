@@ -63,6 +63,9 @@ sequelize
         console.error("Unable to connect to the database:", error);
     });
 
+
+    
+
 const airportData = JSON.parse(fs.readFileSync(path.join(__dirname, 'output.json'), 'utf-8'));
 const airlineData = JSON.parse(fs.readFileSync(path.join(__dirname, 'airlineIataToName.json'), 'utf-8'));
 

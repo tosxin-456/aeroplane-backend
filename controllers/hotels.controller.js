@@ -153,7 +153,7 @@ const getHotelRooms = async (req, res) => {
             cancellationPolicy: offer.policies?.cancellation,
             amenities: offer.room?.amenities
         }));
-        console.log(rooms)
+        // console.log(rooms)
 
         return res.status(200).json({
             success: true,
@@ -215,7 +215,7 @@ const bookHotel = async (req, res) => {
 
         // Step 3: Create the booking request
         const booking = await amadeus.booking.hotel.create(bookingParams);
-        console.log(booking.data.offers)
+        // console.log(booking.data.offers)
         // Step 4: Return the booking confirmation
         return res.status(201).json({
             success: true,

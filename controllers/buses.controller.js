@@ -48,7 +48,7 @@ const busTrips = async (req, res) => {
     const { origin_lat, origin_lon, destination_lat, destination_lon, departure_time, date } = req.query;
     const API_KEY = 'rDCJeY7aPs2jqGowjHTyigo6TYzYRky3';
 
-    console.log(req.query);
+    // console.log(req.query);
 
     if (
         !origin_lat || !origin_lon ||
@@ -74,7 +74,7 @@ const busTrips = async (req, res) => {
         });
 
         const url = `https://transit.land/api/v2/rest/trip_plans?${params.toString()}`;
-        console.log("Request URL:", url);
+        // console.log("Request URL:", url);
 
         const response = await fetch(url);
 
@@ -87,7 +87,7 @@ const busTrips = async (req, res) => {
         const tripData = await response.json();
         const itineraries = tripData.itineraries || [];
 
-        console.log(`Found ${itineraries.length} trip plans`);
+        // console.log(`Found ${itineraries.length} trip plans`);
 
         // Transform the data to a more useful format
         const formattedTrips = itineraries.map(itinerary => {
@@ -141,7 +141,7 @@ const busOperators = async (req, res) => {
         });
 
         const url = `https://transit.land/api/v2/rest/operators?${params.toString()}`;
-        console.log('Testing operators URL:', url);
+        // console.log('Testing operators URL:', url);
 
         const response = await fetch(url);
 

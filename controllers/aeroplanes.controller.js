@@ -128,7 +128,7 @@ const getUpsellOptions = async (req, res) => {
         };
 
         const response = await amadeus.shopping.flightOffers.upselling.post(JSON.stringify(payload));
-        console.log(response)
+        // console.log(response)
         return res.status(200).json({
             success: true,
             data: response.data
@@ -220,7 +220,6 @@ const bookFlight = async (req, res) => {
         // STEP 3: SAVE BOOKED FLIGHT
         const flightSegment = flightOffer.itineraries[0].segments[0]; // assumes 1 itinerary
         const bookingReference = bookingData?.associatedRecords?.[0]?.reference || bookingData?.id;
-        // const bookingReference = bookingData?.id || uuidv4();
 
         const bookedFlight = await BookedFlight.create({
             customerId: customerRecords[0].customer_id,

@@ -7,10 +7,10 @@ const path = require("path");
 const fs = require("fs");
 
 const registerAdmin = async (req, res) => {
-    console.log("object")
+    // console.log("object")
     try {
         const { firstName, lastName, password, profile_image, role, email } = req.body;
-        console.log(req.body)
+        // console.log(req.body)
 
         // Check if admin already exists (use firstName and lastName for simplicity)
         const existingAdmin = await Admin.findOne({ where: { email } });
