@@ -95,7 +95,7 @@ const airlineLink = async (req, res) => {
                 },
                 {
                     role: "user",
-                    content: `I couldn't find the check-in URL for the airline with IATA code "${airlineCode}". What is the likely website page for the site for booking, Respond with only the link.`
+                    content: `Find the official website for the airline with IATA code "${airlineCode}" Respond with just the website.`
                 }
             ]
         });
@@ -276,7 +276,7 @@ const bookFlight = async (req, res) => {
                     },
                     {
                         role: "user",
-                        content: `Find the booking or check-in URL for airline with IATA code "${flightSegment.carrierCode}", flying from ${flightSegment.departure.iataCode} to ${flightSegment.arrival.iataCode} on ${formattedDate}. Respond with only the full URL.`,
+                        content: `Find the official website for the airline with IATA code "${flightSegment.carrierCode}". Respond with only the full URL.`                        
                     },
                 ],
             });
